@@ -32,7 +32,7 @@
       }
     }
   
-    const title = 'What PWA Can Do Today';
+    const title = 'Kaushiks notification';
     const options = {
       body: notificationMessage.value,
     };
