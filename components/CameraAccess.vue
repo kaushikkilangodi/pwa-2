@@ -5,8 +5,8 @@
       <button @click="openCamera" class="btn open-camera">Open Camera</button>
     </div>
     <div v-else class="controls">
-      <button @click="startRecording" class="btn start">Start Recording</button>
-      <button @click="stopRecording" class="btn stop">Stop Recording</button>
+      <button @click="startRecording" class="btn start" :disabled="!canRecord">Start Recording</button>
+      <button @click="stopRecording" class="btn stop" :disabled="!recording">Stop Recording</button>
       <button @click="captureImage" class="btn capture">Capture Image</button>
       <button @click="closeCamera" class="btn close">Close Camera</button>
     </div>
@@ -16,6 +16,9 @@
       <img v-else :src="mediaUrl" alt="Captured Image">
       <a :href="mediaUrl" :download="fileName" class="btn download">Download {{ isVideo ? 'Video' : 'Image' }}</a>
       <button @click="cancelMedia" class="btn cancel">Cancel</button>
+    </div>
+    <div v-if="!canRecord" class="unsupported">
+      <p>Recording is not supported on this device/browser.</p>
     </div>
   </div>
 </template>
@@ -30,21 +33,25 @@ export default {
       isVideo: false,
       fileName: '',
       cameraOpened: false,
+      recording: false,
+      canRecord: 'MediaRecorder' in window,
     };
   },
   methods: {
-    openCamera() {
+    async openCamera() {
       this.cameraOpened = true;
-      this.startCamera();
+      await this.startCamera();
     },
     async startCamera() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       this.$refs.video.srcObject = stream;
     },
     async startRecording() {
+      if (!this.canRecord) return;
+      
       this.resetMedia();
       this.isVideo = true;
-      this.fileName = 'video.mp4';
+      this.fileName = 'video.webm';
       const stream = this.$refs.video.srcObject;
       this.mediaRecorder = new MediaRecorder(stream);
       this.mediaRecorder.ondataavailable = (event) => {
@@ -53,11 +60,12 @@ export default {
         }
       };
       this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.chunks, { type: 'video/mp4' });
+        const blob = new Blob(this.chunks, { type: 'video/webm' });
         this.chunks = [];
         this.mediaUrl = URL.createObjectURL(blob);
       };
       this.mediaRecorder.start();
+      this.recording = true;
     },
     stopRecording() {
       if (this.mediaRecorder) {
@@ -66,6 +74,7 @@ export default {
         const tracks = stream.getTracks();
         tracks.forEach((track) => track.stop());
         this.$refs.video.srcObject = null;
+        this.recording = false;
       }
     },
     async captureImage() {
@@ -193,5 +202,10 @@ video, img {
 
 .media-output {
   margin-top: 20px;
+}
+
+.unsupported {
+  margin-top: 20px;
+  color: red;
 }
 </style>
