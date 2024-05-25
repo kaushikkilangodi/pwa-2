@@ -57,8 +57,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    background-color: #ff7600;
     padding: 20px;
   }
   
