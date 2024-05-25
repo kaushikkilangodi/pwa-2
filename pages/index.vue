@@ -2,5 +2,6 @@
 <div>
     <h1>Index page</h1>
     <PwaInstallButton/>
+    <CameraAccess/>
 </div>
 </template>
