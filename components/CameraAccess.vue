@@ -43,12 +43,14 @@ const selectedCamera = ref('');
 
 const fetchCameras = async () => {
   try {
+    console.log('Fetching camera devices...');
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(device => device.kind === 'videoinput');
     cameraDevices.value = videoDevices;
     if (videoDevices.length > 0) {
       selectedCamera.value = videoDevices[0].deviceId;
     }
+    console.log('Camera devices fetched:', cameraDevices.value);
   } catch (error) {
     console.error('Error fetching camera devices:', error);
   }
@@ -56,17 +58,8 @@ const fetchCameras = async () => {
 
 const startVideoStream = async (deviceId) => {
   const videoElement = videoRef.value;
-  async function testCameraAccess() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById('testVideo').srcObject = stream;
-        console.log('Camera access granted');
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-      }
-    }
-    testCameraAccess();
   try {
+    console.log('Starting video stream with deviceId:', deviceId);
     const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId } });
     videoElement.srcObject = stream;
     const recorder = new MediaRecorder(stream);
@@ -84,13 +77,16 @@ const startVideoStream = async (deviceId) => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
       videoURL.value = url;
+      console.log('Video recording stopped, URL:', url);
     };
+    console.log('Video stream started successfully');
   } catch (error) {
-    console.error('Error accessing the camera:', error);
+    console.error('Error starting video stream:', error);
   }
 };
 
 const handleCaptureClick = () => {
+  console.log('Capturing image...');
   const videoElement = videoRef.value;
   const canvas = canvasRef.value;
   const context = canvas.getContext('2d');
@@ -99,36 +95,44 @@ const handleCaptureClick = () => {
   context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
   const imageUrl = canvas.toDataURL('image/png');
   imageURL.value = imageUrl;
+  console.log('Image captured, URL:', imageUrl);
 };
 
 const handleStartStopRecording = () => {
   if (isRecording.value) {
+    console.log('Stopping recording...');
     mediaRecorder.value.stop();
     isRecording.value = false;
   } else {
+    console.log('Starting recording...');
     mediaRecorder.value.start();
     isRecording.value = true;
   }
 };
 
 const handleCameraChange = (event) => {
+  console.log('Camera changed:', event.target.value);
   selectedCamera.value = event.target.value;
 };
 
 const cancelImageCapture = () => {
+  console.log('Cancelling image capture...');
   imageURL.value = null;
 };
 
 const cancelVideoCapture = () => {
+  console.log('Cancelling video capture...');
   videoURL.value = null;
 };
 
 onMounted(() => {
+  console.log('Component mounted, fetching cameras...');
   fetchCameras();
 });
 
 watch(selectedCamera, (newCamera) => {
   if (newCamera) {
+    console.log('Selected camera changed, starting video stream...');
     startVideoStream(newCamera);
   }
 });
