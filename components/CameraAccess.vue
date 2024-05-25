@@ -126,7 +126,11 @@ const cancelVideoCapture = () => {
 };
 
 onMounted(() => {
-  console.log('Component mounted, fetching cameras...');
+  console.log('Component mounted, checking HTTPS and fetching cameras...');
+  if (window.location.protocol !== 'https:') {
+    console.error('Camera access requires HTTPS.');
+    return;
+  }
   fetchCameras();
 });
 
