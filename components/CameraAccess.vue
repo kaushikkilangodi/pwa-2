@@ -74,7 +74,7 @@ const startVideoStream = async (deviceId) => {
     };
 
     recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
+      const blob = new Blob(chunks, { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       videoURL.value = url;
       console.log('Video recording stopped, URL:', url);
