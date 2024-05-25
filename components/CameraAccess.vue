@@ -1,212 +1,196 @@
 <template>
-  <div class="media-capture">
-    <video ref="video" autoplay></video>
-    <div v-if="!cameraOpened" class="controls">
-      <button @click="openCamera" class="btn open-camera">Open Camera</button>
+  <div class="container">
+    <h1 class="title">Image and Video Capture</h1>
+    <select v-model="selectedCamera" @change="handleCameraChange" class="select">
+      <option v-for="device in cameraDevices" :key="device.deviceId" :value="device.deviceId">
+        {{ device.label || `Camera ${device.deviceId}` }}
+      </option>
+    </select>
+    <div class="video-container">
+      <video ref="videoRef" autoplay class="video"></video>
     </div>
-    <div v-else class="controls">
-      <button @click="startRecording" class="btn start" :disabled="!canRecord">Start Recording</button>
-      <button @click="stopRecording" class="btn stop" :disabled="!recording">Stop Recording</button>
-      <button @click="captureImage" class="btn capture">Capture Image</button>
-      <button @click="closeCamera" class="btn close">Close Camera</button>
+    <div class="button-container">
+      <button @click="handleCaptureClick" class="button">Capture Image</button>
+      <button @click="handleStartStopRecording" class="button">
+        {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
+      </button>
     </div>
-    <div v-if="mediaUrl" class="media-output">
-      <h3>Captured Media</h3>
-      <video v-if="isVideo" :src="mediaUrl" controls></video>
-      <img v-else :src="mediaUrl" alt="Captured Image">
-      <a :href="mediaUrl" :download="fileName" class="btn download">Download {{ isVideo ? 'Video' : 'Image' }}</a>
-      <button @click="cancelMedia" class="btn cancel">Cancel</button>
+    <div class="image-container">
+      <img v-if="imageURL" :src="imageURL" alt="Captured Image" class="image" />
+      <a v-if="imageURL" :href="imageURL" download="captured-image.png" class="download-link">Download Image</a>
+      <a v-if="imageURL" @click="cancelImageCapture" class="download-link">Cancel</a>
     </div>
-    <div v-if="!canRecord" class="unsupported">
-      <p>Recording is not supported on this device/browser.</p>
+    <canvas ref="canvasRef" class="canvas"></canvas>
+    <div v-if="videoURL">
+      <video :src="videoURL" controls class="video"></video>
+      <a :href="videoURL" download="captured-video.webm" class="download-link">Download Video</a>
+      <a @click="cancelVideoCapture" class="download-link">Cancel</a>
     </div>
   </div>
-  
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      mediaRecorder: null,
-      chunks: [],
-      mediaUrl: null,
-      isVideo: false,
-      fileName: '',
-      cameraOpened: false,
-      recording: false,
-      canRecord: 'MediaRecorder' in window,
-    };
-  },
-  methods: {
-    async openCamera() {
-      this.cameraOpened = true;
-      await this.startCamera();
-    },
-    async startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      this.$refs.video.srcObject = stream;
-    },
-    async startRecording() {
-      if (!this.canRecord) return;
-      
-      this.resetMedia();
-      this.isVideo = true;
-      this.fileName = 'video.webm';
-      const stream = this.$refs.video.srcObject;
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.mediaRecorder.ondataavailable = (event) => {
+<script setup>
+import { ref, reactive, onMounted, watch } from 'vue';
+
+const videoRef = ref(null);
+const canvasRef = ref(null);
+const imageContainerRef = ref(null);
+const mediaRecorder = ref(null);
+const videoURL = ref(null);
+const imageURL = ref(null);
+const isRecording = ref(false);
+const cameraDevices = ref([]);
+const selectedCamera = ref('');
+
+const fetchCameras = async () => {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const videoDevices = devices.filter(device => device.kind === 'videoinput');
+  cameraDevices.value = videoDevices;
+  if (videoDevices.length > 0) {
+    selectedCamera.value = videoDevices[0].deviceId;
+  }
+};
+
+const startVideoStream = (deviceId) => {
+  const videoElement = videoRef.value;
+  navigator.mediaDevices.getUserMedia({ video: { deviceId } })
+    .then((stream) => {
+      videoElement.srcObject = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorder.value = recorder;
+
+      const chunks = [];
+
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.chunks.push(event.data);
+          chunks.push(event.data);
         }
       };
-      this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.chunks, { type: 'video/webm' });
-        this.chunks = [];
-        this.mediaUrl = URL.createObjectURL(blob);
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        videoURL.value = url;
       };
-      this.mediaRecorder.start();
-      this.recording = true;
-    },
-    stopRecording() {
-      if (this.mediaRecorder) {
-        this.mediaRecorder.stop();
-        const stream = this.$refs.video.srcObject;
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop());
-        this.$refs.video.srcObject = null;
-        this.recording = false;
-      }
-    },
-    async captureImage() {
-      this.resetMedia();
-      this.isVideo = false;
-      this.fileName = 'image.png';
-      const video = this.$refs.video;
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      this.mediaUrl = canvas.toDataURL('image/png');
-    },
-    closeCamera() {
-      this.cameraOpened = false;
-      const stream = this.$refs.video.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop());
-      this.$refs.video.srcObject = null;
-    },
-    cancelMedia() {
-      this.resetMedia();
-    },
-    resetMedia() {
-      this.mediaUrl = null;
-      this.isVideo = false;
-      this.fileName = '';
-    },
-  },
+    })
+    .catch((err) => {
+      console.error('Error accessing the camera: ', err);
+    });
 };
+
+const handleCaptureClick = () => {
+  const videoElement = videoRef.value;
+  const canvas = canvasRef.value;
+  const context = canvas.getContext('2d');
+  canvas.width = videoElement.videoWidth;
+  canvas.height = videoElement.videoHeight;
+  context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  const imageUrl = canvas.toDataURL('image/png');
+  imageURL.value = imageUrl;
+};
+
+const handleStartStopRecording = () => {
+  if (isRecording.value) {
+    mediaRecorder.value.stop();
+    isRecording.value = false;
+  } else {
+    mediaRecorder.value.start();
+    isRecording.value = true;
+  }
+};
+
+const handleCameraChange = (event) => {
+  selectedCamera.value = event.target.value;
+};
+
+const cancelImageCapture = () => {
+  imageURL.value = null;
+};
+
+const cancelVideoCapture = () => {
+  videoURL.value = null;
+};
+
+onMounted(() => {
+  fetchCameras();
+});
+
+watch(selectedCamera, (newCamera) => {
+  if (newCamera) {
+    startVideoStream(newCamera);
+  }
+});
 </script>
 
 <style scoped>
-.media-capture {
-  text-align: center;
-  max-width: 600px;
-  margin: auto;
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
 }
 
-video, img {
-  max-width: 100%;
-  margin: 10px 0;
+.title {
+  font-size: 24px;
+  margin-bottom: 20px;
 }
 
-.controls {
-  margin: 20px 0;
+.video-container {
+  margin-bottom: 20px;
 }
 
-.btn {
-  background-color: #008cba; /* Blue background */
-  border: none; /* Remove borders */
-  color: white; /* White text */
-  padding: 15px 32px; /* Some padding */
-  text-align: center; /* Center the text */
-  text-decoration: none; /* Remove underline */
-  display: inline-block; /* Make the buttons appear beside each other */
-  font-size: 16px; /* Increase font size */
-  margin: 4px 2px; /* Add some margin */
-  cursor: pointer; /* Add a pointer cursor on hover */
-  border-radius: 12px; /* Rounded corners */
-  transition: background-color 0.3s; /* Smooth transition for background color */
+.video {
+  width: 100%;
+  max-width: 300px;
 }
 
-.btn:hover {
-  background-color: #005f5f; /* Darker blue on hover */
+.button-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.open-camera {
-  background-color: #007bff; /* Blue background */
+.button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-.open-camera:hover {
-  background-color: #0056b3; /* Darker blue on hover */
+.button:hover {
+  background-color: #0056b3;
 }
 
-.start {
-  background-color: #4CAF50; /* Green background */
+.select {
+  padding: 10px;
+  margin-bottom: 20px;
 }
 
-.start:hover {
-  background-color: #45a049; /* Darker green on hover */
+.image-container {
+  margin-bottom: 20px;
 }
 
-.stop {
-  background-color: #f44336; /* Red background */
+.image {
+  width: 100%;
+  max-width: 300px;
 }
 
-.stop:hover {
-  background-color: #da190b; /* Darker red on hover */
+.download-link {
+  display: block;
+  margin-top: 10px;
+  text-decoration: none;
+  color: #007bff;
+  cursor: pointer;
 }
 
-.capture {
-  background-color: #ff9800; /* Orange background */
+.download-link:hover {
+  text-decoration: underline;
 }
 
-.capture:hover {
-  background-color: #e68900; /* Darker orange on hover */
-}
-
-.download {
-  background-color: #007bff; /* Blue background */
-  text-decoration: none; /* Remove underline */
-}
-
-.download:hover {
-  background-color: #0056b3; /* Darker blue on hover */
-}
-
-.cancel {
-  background-color: #6c757d; /* Gray background */
-}
-
-.cancel:hover {
-  background-color: #5a6268; /* Darker gray on hover */
-}
-
-.close {
-  background-color: #ff0000; /* Red background */
-}
-
-.close:hover {
-  background-color: #cc0000; /* Darker red on hover */
-}
-
-.media-output {
-  margin-top: 20px;
-}
-
-.unsupported {
-  margin-top: 20px;
-  color: red;
+.canvas {
+  display: none;
 }
 </style>
