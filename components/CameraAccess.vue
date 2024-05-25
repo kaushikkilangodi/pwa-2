@@ -9,6 +9,7 @@
       <button @click="stopRecording" class="btn stop" :disabled="!recording">Stop Recording</button>
       <button @click="captureImage" class="btn capture">Capture Image</button>
       <button @click="closeCamera" class="btn close">Close Camera</button>
+      <button @click="switchCamera" class="btn switch-camera">Switch Camera</button>
     </div>
     <div v-if="mediaUrl" class="media-output">
       <h3>Captured Media</h3>
@@ -21,7 +22,6 @@
       <p>Recording is not supported on this device/browser.</p>
     </div>
   </div>
-  
 </template>
 
 <script>
@@ -36,16 +36,30 @@ export default {
       cameraOpened: false,
       recording: false,
       canRecord: 'MediaRecorder' in window,
+      devices: [],
+      currentDeviceId: null,
+      backCameraDeviceId: null,
     };
   },
   methods: {
     async openCamera() {
       this.cameraOpened = true;
+      await this.enumerateDevices();
       await this.startCamera();
     },
-    async startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    async enumerateDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.devices = devices.filter(device => device.kind === 'videoinput');
+      this.currentDeviceId = this.devices[0].deviceId;
+      this.backCameraDeviceId = this.devices.find(device => device.label.toLowerCase().includes('back'))?.deviceId || this.devices[0].deviceId;
+    },
+    async startCamera(deviceId = this.currentDeviceId) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId }, audio: true });
       this.$refs.video.srcObject = stream;
+    },
+    async switchCamera() {
+      this.currentDeviceId = this.currentDeviceId === this.backCameraDeviceId ? this.devices[0].deviceId : this.backCameraDeviceId;
+      await this.startCamera(this.currentDeviceId);
     },
     async startRecording() {
       if (!this.canRecord) return;
@@ -199,6 +213,14 @@ video, img {
 
 .close:hover {
   background-color: #cc0000; /* Darker red on hover */
+}
+
+.switch-camera {
+  background-color: #00bcd4; /* Light Blue background */
+}
+
+.switch-camera:hover {
+  background-color: #0097a7; /* Darker Light Blue on hover */
 }
 
 .media-output {
