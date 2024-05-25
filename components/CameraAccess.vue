@@ -21,6 +21,7 @@
       <p>Recording is not supported on this device/browser.</p>
     </div>
   </div>
+  
 </template>
 
 <script>
