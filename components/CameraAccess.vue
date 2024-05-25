@@ -56,6 +56,16 @@ const fetchCameras = async () => {
 
 const startVideoStream = async (deviceId) => {
   const videoElement = videoRef.value;
+  async function testCameraAccess() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        document.getElementById('testVideo').srcObject = stream;
+        console.log('Camera access granted');
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+      }
+    }
+    testCameraAccess();
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId } });
     videoElement.srcObject = stream;
