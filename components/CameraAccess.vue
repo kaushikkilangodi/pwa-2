@@ -45,11 +45,17 @@ const cameraDevices = ref([]);
 const selectedCamera = ref('');
 
 onMounted(async () => {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const videoDevices = devices.filter(device => device.kind === 'videoinput');
-  cameraDevices.value = videoDevices;
-  if (videoDevices.length > 0) {
-    selectedCamera.value = videoDevices[0].deviceId;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    cameraDevices.value = videoDevices;
+    if (videoDevices.length > 0) {
+      selectedCamera.value = videoDevices[0].deviceId;
+    } else {
+      console.error('No video devices found.');
+    }
+  } catch (err) {
+    console.error('Error enumerating devices: ', err);
   }
 });
 
@@ -59,31 +65,30 @@ watch(selectedCamera, (newCamera) => {
   }
 });
 
-const startVideoStream = (deviceId) => {
+const startVideoStream = async (deviceId) => {
   const videoElement = videoRef.value;
-  navigator.mediaDevices.getUserMedia({ video: { deviceId } })
-    .then((stream) => {
-      videoElement.srcObject = stream;
-      const recorder = new MediaRecorder(stream);
-      mediaRecorder.value = recorder;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId } });
+    videoElement.srcObject = stream;
+    const recorder = new MediaRecorder(stream);
+    mediaRecorder.value = recorder;
 
-      const chunks = [];
+    const chunks = [];
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
 
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        videoURL.value = url;
-      };
-    })
-    .catch((err) => {
-      console.error('Error accessing the camera: ', err);
-    });
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      videoURL.value = url;
+    };
+  } catch (err) {
+    console.error('Error accessing the camera: ', err);
+  }
 };
 
 const handleCaptureClick = () => {
