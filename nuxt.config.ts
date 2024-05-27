@@ -35,7 +35,16 @@ export default defineNuxtConfig({
         src:"icons/icon_512x512.png",
         sizes:"512x512",
         type:"image/png",
-      }]
+        form_factor:"wide",
+
+      },
+      {
+        src:"icons/icon_144x144.png",
+        sizes:"144x144",
+        type:"image/png",
+        form_factor:"wide",
+        
+      },]
     },
     workbox: {
       navigateFallback: "/",
