@@ -4,7 +4,7 @@
     <div v-if="!cameraOpened" class="controls">
       <button @click="openCamera" class="btn open-camera">Open Camera</button>
     </div>
-    <div v-else class="controls">
+    <div v-else class="controls"year-format="Function">
       <button @click="toggleRecording" class="btn recording">
         {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
       </button>
@@ -146,7 +146,7 @@ const resetMedia = () => {
 };
 </script>
 
-<style scoped>
+<style>
 .media-capture {
   text-align: center;
   max-width: 600px;

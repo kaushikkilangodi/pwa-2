@@ -51,7 +51,7 @@
   };
   </script>
   
-  <style scoped>
+  <style>
   .container {
     display: flex;
     flex-direction: column;
