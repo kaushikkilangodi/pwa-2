@@ -7,15 +7,8 @@ export default defineNuxtConfig({
       name:"nuxt 3PWA",
       short_name:"nuxt 3 pwa",
       theme_color :"#000000",
-      description:"testing",
-      screenshots:[
-        {
-          src:"icons\icon_512x512.png",
-          sizes:"512x512",
-          type:"img/png",
-          form_factor:'wide',
-        },
-      ],
+      
+  
       icons:[
       {
         src: "icons/icon_64x64.png",
@@ -36,7 +29,13 @@ export default defineNuxtConfig({
         src: "icons/icon_512x512.png",
         sizes: "512x512",
         type: "image/png",
-      },]
+      },],
+      description:"testing",
+      screenshots:[{
+        src:"icons/icon_512x512.png",
+        sizes:"512x512",
+        type:"image/png",
+      }]
     },
     workbox: {
       navigateFallback: "/",
