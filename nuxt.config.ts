@@ -14,6 +14,7 @@ export default defineNuxtConfig({
         src: "icons/icon_64x64.png",
         sizes: "64x64",
         type: "image/png",
+        purpose:"maskable"
       },
       {
         src: "icons/icon_144x144.png",
