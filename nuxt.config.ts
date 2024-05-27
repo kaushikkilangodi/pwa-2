@@ -48,8 +48,28 @@ export default defineNuxtConfig({
       },]
     },
     workbox: {
-      navigateFallback: "/",
+      runtimeCaching: [
+        {
+          urlPattern: ({ request }) => request.destination === 'document' || request.destination === 'script' || request.destination === 'style',
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-resources',
+          }
+        },
+        {
+          urlPattern: ({ request }) => request.destination === 'image' || request.destination === 'video',
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'media-resources',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+            },
+          },
+        },
+      ],
     },
+  
     
     devOptions:{
       enabled:true,
