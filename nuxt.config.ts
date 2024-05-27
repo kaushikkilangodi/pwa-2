@@ -32,17 +32,17 @@ export default defineNuxtConfig({
       },],
       description:"testing",
       screenshots:[{
-        src:"icons/icon_512x512.png",
+        src:"icons/home.png",
         sizes:"512x512",
         type:"image/png",
         form_factor:"wide",
 
       },
       {
-        src:"icons/icon_144x144.png",
+        src:"icons/install.png",
         sizes:"144x144",
         type:"image/png",
-        form_factor:"wide",
+        form_factor:"narrow",
         
       },]
     },
